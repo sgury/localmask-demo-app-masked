@@ -171,6 +171,13 @@ def push_to_gcp(secrets: dict, project_id: str):
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
+    """CLI entry point: push LocalMask-held secrets straight into a cloud vault.
+
+    Reads real values for ``--scan-id`` from LocalMask into memory, then writes
+    them to Azure Key Vault (``--vault`` required), AWS Secrets Manager
+    (``--prefix``), or GCP Secret Manager (``--project`` required).
+    Nothing is written to disk. Exits with status 1 if a required flag is missing.
+    """
     parser = argparse.ArgumentParser(
         description="Push LocalMask secrets directly to cloud vault — no .env file written"
     )

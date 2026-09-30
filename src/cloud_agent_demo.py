@@ -356,6 +356,13 @@ def rehydrate_report(report_path: Path):
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
+    """CLI entry point for the LocalMask cloud agent demo.
+
+    Parses ``--task``, ``--platform`` and ``--no-rehydrate``, sends the masked
+    codebase to the selected AI platform (Azure AI Foundry or the Anthropic API),
+    saves the agent's report, and rehydrates masked placeholders locally
+    unless ``--no-rehydrate`` is given. Exits with status 1 on any error.
+    """
     parser = argparse.ArgumentParser(
         description="LocalMask + Cloud AI Agent Demo",
         formatter_class=argparse.RawDescriptionHelpFormatter,

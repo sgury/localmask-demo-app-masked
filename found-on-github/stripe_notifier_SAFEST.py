@@ -52,6 +52,13 @@ class VaultSecrets:
     ]
 
     def __init__(self):
+        """Load all ``REQUIRED`` secrets from the vault named by ``VAULT_PLATFORM``.
+
+        ``VAULT_PLATFORM`` is ``azure`` (default), ``aws`` or ``gcp``.
+
+        Raises:
+            ValueError: If ``VAULT_PLATFORM`` is not a supported platform.
+        """
         platform = os.getenv("VAULT_PLATFORM", "azure").lower()
         loader   = getattr(self, f"_load_{platform}", None)
         if not loader:
@@ -63,6 +70,13 @@ class VaultSecrets:
 
     # ── Azure Key Vault ───────────────────────────────────────────────────────
     def _load_azure(self) -> dict:
+        """Fetch ``REQUIRED`` secrets from Azure Key Vault at ``AZURE_VAULT_URL``.
+
+        Authenticates with ``DefaultAzureCredential``.
+
+        Returns:
+            dict: Secret name -> value.
+        """
         from azure.keyvault.secrets import SecretClient
         from azure.identity import DefaultAzureCredential
 
@@ -73,6 +87,13 @@ class VaultSecrets:
 
     # ── AWS Secrets Manager ───────────────────────────────────────────────────
     def _load_aws(self) -> dict:
+        """Fetch ``REQUIRED`` secrets from AWS Secrets Manager.
+
+        Secret IDs are ``<AWS_SECRET_PREFIX>/<name-lowercased>`` (prefix defaults to ``prod``).
+
+        Returns:
+            dict: Secret name -> value.
+        """
         import boto3, json
         prefix = os.getenv("AWS_SECRET_PREFIX", "prod")
         client = boto3.client("secretsmanager")
@@ -86,6 +107,13 @@ class VaultSecrets:
 
     # ── GCP Secret Manager ────────────────────────────────────────────────────
     def _load_gcp(self) -> dict:
+        """Fetch the latest version of each ``REQUIRED`` secret from GCP Secret Manager.
+
+        Uses project ``GCP_PROJECT_ID``; secret IDs are lowercased with ``-`` -> ``_``.
+
+        Returns:
+            dict: Secret name -> value.
+        """
         from google.cloud import secretmanager
 
         project = os.environ["GCP_PROJECT_ID"]
@@ -100,6 +128,14 @@ class VaultSecrets:
         return secrets
 
     def get(self, key: str) -> str:
+        """Return a cached secret value.
+
+        Args:
+            key: Vault secret name, e.g. ``"STRIPE-API-KEY"``.
+
+        Raises:
+            KeyError: If the secret is missing or empty.
+        """
         value = self._secrets.get(key)
         if not value:
             raise KeyError(f"Secret '{key}' not found in vault")
@@ -117,6 +153,10 @@ app = Flask(__name__)
 
 
 def get_db():
+    """Open a new PostgreSQL connection using the vault-held ``DB-PASSWORD``.
+
+    Host, database name and user come from ``DB_HOST``, ``DB_NAME`` and ``DB_USER``.
+    """
     return psycopg2.connect(
         host=os.getenv("DB_HOST"),
         dbname=os.getenv("DB_NAME", "payments"),
@@ -126,6 +166,11 @@ def get_db():
 
 
 def save_payment(pi: dict):
+    """Insert a Stripe PaymentIntent's id, amount and status into the ``payments`` table.
+
+    Args:
+        pi: PaymentIntent object from the webhook event.
+    """
     conn = get_db()
     cur  = conn.cursor()
     cur.execute(
@@ -136,6 +181,11 @@ def save_payment(pi: dict):
 
 
 def notify_slack(msg: str):
+    """Post a plain-text message to the vault-held Slack webhook URL.
+
+    Args:
+        msg: Message text.
+    """
     requests.post(
         vault.get("SLACK-WEBHOOK-URL"),
         json={"text": msg},
@@ -144,6 +194,12 @@ def notify_slack(msg: str):
 
 
 def notify_email(to: str, amount: int):
+    """Send a payment-confirmation email via SendGrid using the vault-held API key.
+
+    Args:
+        to: Recipient email address.
+        amount: Amount in cents (formatted as dollars in the email).
+    """
     SendGridAPIClient(vault.get("SENDGRID-API-KEY")).send(
         Mail(
             from_email=os.getenv("FROM_EMAIL", "~[EMAIL_2]~"),
@@ -156,6 +212,15 @@ def notify_email(to: str, amount: int):
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
+    """Handle Stripe webhook POSTs.
+
+    Verifies the ``Stripe-Signature`` header against the vault-held webhook secret;
+    on ``payment_intent.succeeded`` saves the payment, notifies Slack, and emails
+    the receipt address if present.
+
+    Returns:
+        JSON ``{"ok": true}``, or ``{"error": ...}`` with HTTP 400 on an invalid signature.
+    """
     try:
         event = stripe.Webhook.construct_event(
             request.data,

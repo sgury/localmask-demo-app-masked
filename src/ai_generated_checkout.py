@@ -43,6 +43,17 @@ PLAN_PRICES = {
 
 
 class CheckoutRequest(BaseModel):
+    """Request body for creating a Stripe Checkout session.
+
+    Attributes:
+        plan: ShipFast plan key (must exist in the price map).
+        billing_cycle: ``"monthly"`` or ``"annual"``; defaults to monthly.
+        customer_email: Email address prefilled on the Checkout page.
+        org_id: ShipFast organization the subscription belongs to.
+        success_url: Redirect target after a successful checkout.
+        cancel_url: Redirect target if the user abandons checkout.
+    """
+
     plan: str
     billing_cycle: str = "monthly"
     customer_email: EmailStr
@@ -52,6 +63,13 @@ class CheckoutRequest(BaseModel):
 
 
 class PortalRequest(BaseModel):
+    """Request body for opening the Stripe Customer Portal.
+
+    Attributes:
+        customer_id: Stripe customer ID whose billing portal to open.
+        return_url: Where Stripe sends the user after leaving the portal.
+    """
+
     customer_id: str
     return_url: Optional[str] = "https://app.shipfast.io/settings/~[SERVER_HOSTNAME_SQL_1]~"
 

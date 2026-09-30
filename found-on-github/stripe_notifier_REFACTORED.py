@@ -52,6 +52,14 @@ app = Flask(__name__)
 
 # ── Logic (unchanged — AI kept all functionality intact) ──────────────────────
 def save_payment(pi):
+    """Insert a Stripe PaymentIntent's id, amount and status into the ``payments`` table.
+
+    Connection details come from environment variables
+    (``DB_HOST``, ``DB_PASSWORD``, optional ``DB_NAME``/``DB_USER``).
+
+    Args:
+        pi: PaymentIntent object from the webhook event.
+    """
     conn = psycopg2.connect(
         host=DB_HOST, dbname=os.getenv("DB_NAME", "payments"),
         user=os.getenv("DB_USER", "admin"), password=DB_PASSWORD
@@ -64,9 +72,20 @@ def save_payment(pi):
     conn.commit(); cur.close(); conn.close()
 
 def notify_slack(msg: str):
+    """Post a plain-text message to the Slack webhook in ``SLACK_WEBHOOK_URL``.
+
+    Args:
+        msg: Message text.
+    """
     requests.post(SLACK_WEBHOOK, json={"text": msg}, timeout=5)
 
 def notify_email(to: str, amount: int):
+    """Send a payment-confirmation email via SendGrid.
+
+    Args:
+        to: Recipient email address.
+        amount: Amount in cents (formatted as dollars in the email).
+    """
     SendGridAPIClient(SENDGRID_KEY).send(
         Mail(
             from_email=os.getenv("FROM_EMAIL", "~[EMAIL_2]~"),
@@ -78,6 +97,15 @@ def notify_email(to: str, amount: int):
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
+    """Handle Stripe webhook POSTs.
+
+    Verifies the ``Stripe-Signature`` header against ``STRIPE_WEBHOOK_SECRET``;
+    on ``payment_intent.succeeded`` saves the payment, notifies Slack, and emails
+    the receipt address if present.
+
+    Returns:
+        JSON ``{"ok": true}``, or ``{"error": ...}`` with HTTP 400 on an invalid signature.
+    """
     try:
         event = stripe.Webhook.construct_event(
             request.data, request.headers["Stripe-Signature"], WEBHOOK_SECRET

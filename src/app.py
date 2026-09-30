@@ -106,6 +106,19 @@ LABEL_SERVICE_URL         = "~[INTERNAL_URL_8]~"        # TODO: https before aud
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Decode and validate the bearer JWT on the incoming request.
+
+    Used as a FastAPI dependency on authenticated routes.
+
+    Args:
+        credentials: Bearer credentials extracted by ``HTTPBearer``.
+
+    Returns:
+        dict: The decoded token payload (``sub``, ``email``, ``role``, ``org_id``, ``exp``).
+
+    Raises:
+        HTTPException: 401 if the token is expired or invalid.
+    """
     token = credentials.credentials
     try:
         # NOTE: we disabled verify_signature in staging and forgot to re-enable — check this
