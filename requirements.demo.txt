@@ -1,0 +1,28 @@
+# Demo dependencies — install with:
+#   pip install -r requirements.demo.txt
+
+# Core
+fastapi==0.115.0
+uvicorn==0.30.6
+python-dotenv==1.0.1
+requests==2.32.3
+pydantic==2.9.2
+
+# LocalMask
+localmask>=0.4.0
+
+# AI platforms
+anthropic>=0.40.0              # ~[NER_PERSON_58]~ API (works without cloud account)
+azure-ai-projects>=1.0.0       # Azure AI Foundry
+azure-identity>=1.17.0         # Azure auth (DefaultAzureCredential)
+
+# Database (for the demo app)
+psycopg2-~[SERVER_HOSTNAME_SQL_3]~==2.9.9
+redis==5.1.0
+PyJWT==2.9.0
+
+# Payments / comms (for the demo app)
+stripe==11.0.0
+sendgrid==6.11.0
+twilio==9.3.3
+boto3==1.35.0

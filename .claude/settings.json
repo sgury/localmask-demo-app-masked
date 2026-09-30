@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./**)",
+      "Grep",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(sed:*)",
+      "Bash(awk:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(less:*)",
+      "Bash(more:*)",
+      "Bash(strings:*)"
+    ]
+  }
+}
